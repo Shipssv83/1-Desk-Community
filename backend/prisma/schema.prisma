@@ -1,0 +1,258 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String         @id @default(uuid()) @db.Uuid
+  email              String?        @unique @db.VarChar(255)
+  name               String         @db.VarChar(255)
+  passwordHash       String?        @map("password_hash") @db.VarChar(255)
+  oauthProvider      String?        @map("oauth_provider") @db.VarChar(50)
+  oauthId            String?        @map("oauth_id") @db.VarChar(255)
+  lastName           String?        @map("last_name") @db.VarChar(255)
+  bio                String?        @db.Text
+  role               String         @default("operator") @db.VarChar(20)
+  avatarUrl          String?        @map("avatar_url") @db.VarChar(500)
+  isActive           Boolean        @default(true) @map("is_active")
+  twofaSecret        String?        @map("twofa_secret") @db.VarChar(255)
+  twofaEnabled       Boolean        @default(false) @map("twofa_enabled")
+  twofaRecovery      Json           @default("[]") @map("twofa_recovery")
+  createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  refreshTokens      RefreshToken[]
+  conversations      Conversation[]
+  mediaFiles         MediaFile[]
+  ownedOrganizations Organization[] @relation("OrgOwner")
+  memberships        Membership[]
+
+  @@unique([oauthProvider, oauthId])
+  @@map("users")
+}
+
+model Organization {
+  id            String                @id @default(uuid()) @db.Uuid
+  name          String                @db.VarChar(255)
+  slug          String                @unique @db.VarChar(255)
+  ownerUserId   String                @map("owner_user_id") @db.Uuid
+  owner         User                  @relation("OrgOwner", fields: [ownerUserId], references: [id])
+  planKey       String                @default("free") @map("plan_key") @db.VarChar(50)
+  status        String                @default("active") @db.VarChar(20)
+  createdAt     DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  memberships   Membership[]
+  bots          Bot[]
+  inboxes       Inbox[]
+  integrations  Integration[]
+  dispatches    IntegrationDispatch[]
+  webhookEvents WebhookEvent[]
+
+  @@map("organizations")
+}
+
+// ── Integration layer ──────────────────────────────────────────────
+// Per-org config for an external brain/system. The dispatcher resolves an
+// adapter by `kind`; `provider` selects the concrete adapter implementation.
+// Secrets live in `credentials` (encrypted at the app layer), routing-safe
+// settings in `config`.
+model Integration {
+  id              String       @id @default(uuid()) @db.Uuid
+  orgId           String       @map("org_id") @db.Uuid
+  org             Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  provider        String       @db.VarChar(40) // dify
+  kind            String       @db.VarChar(20) // conversational
+  name            String       @db.VarChar(255)
+  config          Json         @default("{}")
+  credentials     Json         @default("{}")
+  isActive        Boolean      @default(true) @map("is_active")
+  createdByUserId String?      @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([orgId, provider, name])
+  @@index([orgId])
+  @@index([orgId, kind])
+  @@map("integrations")
+}
+
+// Inbound webhook dedupe/idempotency record.
+model WebhookEvent {
+  id        String        @id @default(uuid()) @db.Uuid
+  orgId     String?       @map("org_id") @db.Uuid
+  org       Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  source    String        @db.VarChar(40) // telegram | widget | n8n | seatable ...
+  dedupeKey String        @map("dedupe_key") @db.VarChar(500)
+  status    String        @default("received") @db.VarChar(20) // received | processed | failed
+  attempts  Int           @default(0)
+  payload   Json          @default("{}")
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([source, dedupeKey])
+  @@index([orgId])
+  @@map("webhook_events")
+}
+
+// Outbound dispatch log with idempotency key + retry state.
+model IntegrationDispatch {
+  id             String       @id @default(uuid()) @db.Uuid
+  orgId          String       @map("org_id") @db.Uuid
+  org            Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  integrationId  String?      @map("integration_id") @db.Uuid
+  kind           String       @db.VarChar(20) // agent | workflow | crm
+  idempotencyKey String       @map("idempotency_key") @db.VarChar(500)
+  status         String       @default("pending") @db.VarChar(20) // pending | success | failed | retrying
+  attempts       Int          @default(0)
+  lastError      String?      @map("last_error") @db.Text
+  request        Json         @default("{}")
+  response       Json         @default("{}")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([orgId, idempotencyKey])
+  @@index([orgId])
+  @@index([status])
+  @@map("integration_dispatches")
+}
+
+model Membership {
+  id        String       @id @default(uuid()) @db.Uuid
+  orgId     String       @map("org_id") @db.Uuid
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId    String       @map("user_id") @db.Uuid
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String       @db.VarChar(20) // owner | admin | billing_admin | member | viewer
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([orgId, userId])
+  @@index([userId])
+  @@map("memberships")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique @db.VarChar(500)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([token])
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Bot {
+  id              String        @id @default(uuid()) @db.Uuid
+  name            String        @db.VarChar(255)
+  webhookUrl      String        @map("webhook_url") @db.VarChar(500)
+  apiKey          String?       @map("api_key") @db.VarChar(500)
+  config          Json          @default("{}")
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  inboxes         Inbox[]
+  orgId           String?       @map("org_id") @db.Uuid
+  org             Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdByUserId String?       @map("created_by_user_id") @db.Uuid
+
+  @@index([orgId])
+  @@map("bots")
+}
+
+model Inbox {
+  id                 String         @id @default(uuid()) @db.Uuid
+  name               String         @db.VarChar(255)
+  channelType        String         @map("channel_type") @db.VarChar(30)
+  channelConfig      Json           @default("{}") @map("channel_config")
+  botId              String?        @map("bot_id") @db.Uuid
+  bot                Bot?           @relation(fields: [botId], references: [id], onDelete: SetNull)
+  isActive           Boolean        @default(true) @map("is_active")
+  createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  contacts           Contact[]
+  conversations      Conversation[]
+  orgId              String?        @map("org_id") @db.Uuid
+  org                Organization?  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdByUserId    String?        @map("created_by_user_id") @db.Uuid
+  // Routing: which integration (Dify conversational brain) handles this inbox.
+  // Plain UUID column resolved in code with an orgId guard.
+  agentIntegrationId String?        @map("agent_integration_id") @db.Uuid
+  routingPolicy      Json           @default("{}") @map("routing_policy")
+
+  @@index([orgId])
+  @@map("inboxes")
+}
+
+model Contact {
+  id            String         @id @default(uuid()) @db.Uuid
+  name          String?        @db.VarChar(255)
+  avatarUrl     String?        @map("avatar_url") @db.VarChar(500)
+  email         String?        @db.VarChar(255)
+  phone         String?        @db.VarChar(50)
+  externalId    String         @map("external_id") @db.VarChar(500)
+  channelType   String         @map("channel_type") @db.VarChar(30)
+  inboxId       String         @map("inbox_id") @db.Uuid
+  inbox         Inbox          @relation(fields: [inboxId], references: [id], onDelete: Cascade)
+  metadata      Json           @default("{}")
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  conversations Conversation[]
+
+  @@unique([externalId, inboxId])
+  @@index([inboxId])
+  @@index([externalId])
+  @@map("contacts")
+}
+
+model Conversation {
+  id                 String    @id @default(uuid()) @db.Uuid
+  contactId          String    @map("contact_id") @db.Uuid
+  contact            Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  inboxId            String    @map("inbox_id") @db.Uuid
+  inbox              Inbox     @relation(fields: [inboxId], references: [id], onDelete: Cascade)
+  assignedTo         String?   @map("assigned_to") @db.Uuid
+  assignee           User?     @relation(fields: [assignedTo], references: [id], onDelete: SetNull)
+  status             String    @default("open") @db.VarChar(20)
+  botPaused          Boolean   @default(false) @map("bot_paused")
+  difyConversationId String?   @map("dify_conversation_id") @db.VarChar(500)
+  lastMessageAt      DateTime  @default(now()) @map("last_message_at") @db.Timestamptz
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  messages           Message[]
+
+  @@index([status])
+  @@index([inboxId])
+  @@index([assignedTo])
+  @@index([lastMessageAt])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(uuid()) @db.Uuid
+  conversationId String       @map("conversation_id") @db.Uuid
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderType     String       @map("sender_type") @db.VarChar(20)
+  senderId       String?      @map("sender_id") @db.Uuid
+  content        String       @db.Text
+  messageType    String       @default("text") @map("message_type") @db.VarChar(20)
+  metadata       Json         @default("{}")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([conversationId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+model MediaFile {
+  id           String   @id @default(uuid()) @db.Uuid
+  originalName String?  @map("original_name") @db.VarChar(255)
+  storedName   String   @map("stored_name") @db.VarChar(255)
+  url          String   @db.VarChar(500)
+  mimeType     String?  @map("mime_type") @db.VarChar(100)
+  size         Int?
+  width        Int?
+  height       Int?
+  uploadedBy   String?  @map("uploaded_by") @db.Uuid
+  uploader     User?    @relation(fields: [uploadedBy], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("media_files")
+}

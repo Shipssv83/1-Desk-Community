@@ -1,0 +1,486 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ══════════════════════════════════════════════════════════════
+   APP THEME — RGB channel variables (supports Tailwind opacity)
+   ══════════════════════════════════════════════════════════════ */
+
+html[data-theme='dark'],
+html:not([data-theme='light']) {
+  /* backgrounds */
+  --platform-bg-rgb:              13  17  23;
+  --platform-surface-rgb:         22  27  34;
+  --platform-surface-raised-rgb:  28  35  51;
+  --platform-surface-overlay-rgb: 33  41  58;
+  --platform-sidebar-rgb:         17  24  39;
+  /* borders */
+  --platform-border-rgb:          30  45  61;
+  --platform-border-strong-rgb:   42  63  85;
+  /* text */
+  --platform-text-primary-rgb:    226 232 240;
+  --platform-text-secondary-rgb:  148 163 184;
+  --platform-text-muted-rgb:       71  85 105;
+  /* accent */
+  --platform-accent-rgb:           0 201 177;
+  --platform-accent-hover-rgb:     0 179 157;
+  --platform-accent-active-rgb:    0 158 139;
+}
+
+html[data-theme='light'] {
+  /* backgrounds — matches design-system.pen variables */
+  --platform-bg-rgb:              251 251 251;   /* #FBFBFB */
+  --platform-surface-rgb:         255 255 255;   /* #FFFFFF */
+  --platform-surface-raised-rgb:  246 246 246;   /* #F6F6F6 */
+  --platform-surface-overlay-rgb: 235 235 235;   /* #EBEBEB */
+  --platform-sidebar-rgb:         255 255 255;   /* #FFFFFF */
+  /* borders */
+  --platform-border-rgb:          231 231 231;   /* #E7E7E7 */
+  --platform-border-strong-rgb:   213 213 213;   /* #D5D5D5 */
+  /* text */
+  --platform-text-primary-rgb:     23  23  23;   /* #171717 */
+  --platform-text-secondary-rgb:  111 111 111;   /* #6F6F6F */
+  --platform-text-muted-rgb:      155 155 155;   /* #9B9B9B */
+  /* accent: dark in light mode (design uses black as primary action) */
+  --platform-accent-rgb:           23  23  23;   /* #171717 */
+  --platform-accent-hover-rgb:     45  45  45;   /* #2D2D2D */
+  --platform-accent-active-rgb:    64  64  64;   /* #404040 */
+}
+
+@layer base {
+  body {
+    @apply antialiased bg-platform-bg text-platform-text-primary;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+}
+
+/* ── Scrollbars ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: rgb(var(--platform-bg-rgb)); }
+::-webkit-scrollbar-thumb { background: rgb(var(--platform-surface-raised-rgb)); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--platform-accent-rgb)); }
+
+/* ── App utilities ──────────────────────────────────────────── */
+.active-nav-border { position: relative; }
+.active-nav-border::after {
+  content: '';
+  position: absolute;
+  left: 0; top: 15%; bottom: 15%;
+  width: 3px;
+  background-color: rgb(var(--platform-accent-rgb));
+  border-radius: 0 4px 4px 0;
+}
+.panel-glass {
+  background: rgb(var(--platform-surface-rgb) / 0.75);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgb(var(--platform-border-rgb) / 0.5);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DESIGN SYSTEM — CSS Variables
+   ══════════════════════════════════════════════════════════════ */
+
+/* Landing/Login design system variables */
+html[data-theme='light'] {
+  --bg:           #fbfbfb;
+  --surface:      #ffffff;
+  --surface-muted:#f6f6f6;
+  --text:         #171717;
+  --text-muted:   #6f6f6f;
+  --text-soft:    #9b9b9b;
+  --border:       #e7e7e7;
+  --border-strong:#d5d5d5;
+  --shadow:       0 24px 80px rgba(15,15,15,0.08);
+  --glow:         0 0 0 1px rgba(23,23,23,0.06), 0 8px 28px rgba(23,23,23,0.08);
+  --glow-strong:  0 0 0 1px rgba(23,23,23,0.08), 0 12px 40px rgba(23,23,23,0.14);
+  --radius:       8px;
+  --accent:       #00C9B1;
+}
+
+html[data-theme='dark'],
+html:not([data-theme='light']) {
+  --bg:           #080808;
+  --surface:      #101010;
+  --surface-muted:#171717;
+  --text:         #f7f7f7;
+  --text-muted:   #a1a1a1;
+  --text-soft:    #737373;
+  --border:       #242424;
+  --border-strong:#343434;
+  --shadow:       0 24px 80px rgba(0,0,0,0.38);
+  --glow:         0 0 0 1px rgba(255,255,255,0.12), 0 20px 54px rgba(74,144,255,0.2), 0 0 64px rgba(45,212,191,0.16);
+  --glow-strong:  0 0 0 1px rgba(255,255,255,0.16), 0 28px 76px rgba(74,144,255,0.26), 0 0 84px rgba(45,212,191,0.2);
+  --radius:       8px;
+  --accent:       #00C9B1;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LOGIN PAGE
+   ══════════════════════════════════════════════════════════════ */
+
+.login-root {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  overflow: hidden;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Dark bg gradient */
+html[data-theme='dark'] .login-root::before,
+html:not([data-theme='light']) .login-root::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 12% 6%,  rgba(45, 212, 191, 0.12) 0%, transparent 50%),
+    radial-gradient(circle at 86% 16%, rgba(74, 144, 255, 0.12) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Theme toggle */
+.login-theme-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 50;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+.login-theme-toggle:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+  box-shadow: var(--glow);
+}
+
+/* Card */
+.login-card {
+  position: relative;
+  z-index: 1;
+  width: min(420px, calc(100vw - 32px));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 1.5);
+  padding: 40px;
+  box-shadow: var(--shadow);
+  animation: loginFadeIn 720ms ease both;
+}
+
+/* Brand row */
+.login-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+.login-brand-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #080808;
+}
+.login-brand-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+/* Headings */
+.login-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  margin: 0 0 6px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.login-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  margin: 0 0 24px;
+}
+
+/* Error */
+.login-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(239,68,68,0.3);
+  background: rgba(239,68,68,0.08);
+  color: #ef4444;
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+
+/* OAuth buttons */
+.login-oauth {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.login-oauth-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 42px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  white-space: nowrap;
+}
+.login-oauth-btn:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--glow);
+  transform: translateY(-1px);
+}
+.login-oauth-btn--disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Telegram widget container */
+.login-tg-wrap {
+  display: flex;
+  justify-content: center;
+  min-height: 42px;
+  align-items: center;
+}
+.login-tg-wrap iframe {
+  border-radius: var(--radius) !important;
+}
+
+/* Divider */
+.login-divider {
+  position: relative;
+  text-align: center;
+  margin: 20px 0;
+}
+.login-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border);
+}
+.login-divider span {
+  position: relative;
+  padding: 0 12px;
+  background: var(--surface);
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+/* Form */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.login-field label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+.login-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.login-input-wrap svg {
+  position: absolute;
+  left: 12px;
+  color: var(--text-soft);
+  pointer-events: none;
+}
+.login-input-wrap input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px 0 36px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+.login-input-wrap input::placeholder {
+  color: var(--text-soft);
+}
+.login-input-wrap input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0, 201, 177, 0.12);
+}
+
+/* Submit */
+.login-submit {
+  height: 42px;
+  margin-top: 4px;
+  border-radius: var(--radius);
+  border: none;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+}
+.login-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--glow-strong);
+}
+.login-submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Footer */
+.login-footer {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+/* Spinner */
+.login-spinner {
+  animation: loginSpin 0.9s linear infinite;
+}
+
+/* Controls (lang pill + theme toggle) */
+.login-controls {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 50;
+}
+.ld-lang-pill {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+}
+.ld-lang-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease;
+}
+.ld-lang-btn.active {
+  background: var(--text);
+  color: var(--bg);
+}
+.ld-lang-btn:not(.active):hover {
+  color: var(--text);
+}
+
+/* Thin divider line */
+.login-divider-line {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0 16px;
+}
+
+/* Legal text */
+.login-legal {
+  font-size: 12px;
+  color: var(--text-soft);
+  text-align: center;
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+/* Admin toggle */
+.login-admin-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease;
+  margin-bottom: 12px;
+}
+.login-admin-toggle:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.rotate-180 {
+  transform: rotate(180deg);
+}
+
+@keyframes loginFadeIn {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes loginSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
